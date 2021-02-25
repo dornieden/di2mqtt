@@ -19,3 +19,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Acknowledgments
+di2mqtt is developed with PlatformIO using the ESP-WROOM-02 (Espressif) Board with Arduino Framework. The PlatformIO is licensed under the Apache 2.0 license.   https://community.platformio.org/t/platformios-license/2312  
+https://github.com/espressif/arduino-esp32. 
+
+This software uses the following external libraries:
+* hieromon/AutoConnect@^1.2.2 - AutoConnect is licensed under the MIT License. https://github.com/Hieromon/AutoConnect
