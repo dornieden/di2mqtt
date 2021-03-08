@@ -1,0 +1,68 @@
+{
+  "title": "MQTT Settings",
+  "uri": "/mqtt_setting",
+  "menu": true,
+  "element": [
+    {
+      "name": "style",
+      "type": "ACStyle",
+      "value": "label+input,label+select{position:sticky;left:120px;width:230px!important;box-sizing:border-box;}"
+    },
+    {
+      "name": "header",
+      "type": "ACText",
+      "value": "<h2>MQTT broker settings</h2>",
+      "style": "text-align:center;color:#2f4f4f;"
+    },
+    {
+      "name": "caption",
+      "type": "ACText",
+      "value": "MQTT Topic: di2mqtt"
+    },
+    {
+        "name": "mqttserver",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Hostname or IP-Adress.",
+        "label": "Server"
+    },
+    {
+        "name": "mqttport",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Port.",
+        "label": "Port"
+    },
+    {
+        "name": "mqttuser",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Username.",
+        "label": "Username"
+    },
+    {
+        "name": "mqttpassword",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Password.",
+        "label": "Password"
+    },
+    {
+      "name": "newline",
+      "type": "ACElement",
+      "value": "<hr>"
+    },
+    {
+      "name": "save",
+      "type": "ACSubmit",
+      "value": "Save&Start",
+      "uri": "/mqtt_save"
+    },
+    {
+      "name": "discard",
+      "type": "ACSubmit",
+      "value": "Discard",
+      "uri": "/"
+    }
+  ]
+}
