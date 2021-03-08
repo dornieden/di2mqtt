@@ -1,0 +1,31 @@
+[
+    {
+        "name": "mqttserver",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Hostname or IP-Adress.",
+        "label": "Server"
+    },
+    {
+        "name": "mqttport",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Port.",
+        "label": "Port"
+    },
+    {
+        "name": "mqttuser",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Username.",
+        "label": "Username"
+    },
+    {
+        "name": "mqttpassword",
+        "type": "ACInput",
+        "value": "",
+        "placeholder": "MQTT Broker Password.",
+        "label": "Password"
+    }
+  ]
+  
