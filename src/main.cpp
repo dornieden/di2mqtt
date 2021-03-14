@@ -1,55 +1,21 @@
-/*
-  ESP8266/ESP32 publish the RSSI as the WiFi signal strength to ThingSpeak channel.
-  This example is for explaining how to use the AutoConnect library.
-
-  In order to execute this example, the ThingSpeak account is needed. Sing up
-  for New User Account and create a New Channel via My Channels.
-  For details, please refer to the project page.
-  https://hieromon.github.io/AutoConnect/howtoembed.html#used-with-mqtt-as-a-client-application
-
-  Also, this example uses AutoConnectAux menu customization which stored in SPIFFS.
-  To evaluate this example, you upload the contents as mqtt_setting.json of
-  the data folder with MkSPIFFS Tool ("ESP8266 Sketch Data Upload" in Tools menu
-  in Arduino IDE).
-
-  This example is based on the thinkspeak.com environment as of Dec. 20, 2018.
-  Copyright (c) 2020 Hieromon Ikasamo.
-  This software is released under the MIT License.
-  https://opensource.org/licenses/MIT
+/**	
+* di2mqtt main file.
+* @file main.cpp
+* @author info@smartpassivehouse.com
+* @version 0.0.1
+* @date 2021-02-25
+* @copyright MIT license.
 */
 
-#if defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
-#define GET_CHIPID()  (ESP.getChipId())
-#elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
 #include <HTTPClient.h>
-#define GET_CHIPID()  ((uint16_t)(ESP.getEfuseMac()>>32))
-#endif
 #include <PubSubClient.h>
 #include <AutoConnect.h>
-
-/*
-  AC_USE_SPIFFS indicates SPIFFS or LittleFS as available file systems that
-  will become the AUTOCONNECT_USE_SPIFFS identifier and is exported as showng
-  the valid file system. After including AutoConnect.h, the Sketch can determine
-  whether to use FS.h or LittleFS.h by AUTOCONNECT_USE_SPIFFS definition.
-*/
 #include <FS.h>
-#if defined(ARDUINO_ARCH_ESP8266)
-#ifdef AUTOCONNECT_USE_SPIFFS
-FS& FlashFS = SPIFFS;
-#else
-#include <LittleFS.h>
-FS& FlashFS = LittleFS;
-#endif
-#elif defined(ARDUINO_ARCH_ESP32)
 #include <SPIFFS.h>
 fs::SPIFFSFS& FlashFS = SPIFFS;
-#endif
 
 #define PARAM_FILE      "/param.json"
 #define AUX_MQTTSETTING "/mqtt_setting"
@@ -57,11 +23,7 @@ fs::SPIFFSFS& FlashFS = SPIFFS;
 #define AUX_MQTTCLEAR   "/mqtt_clear"
 
 // Adjusting WebServer class with between ESP8266 and ESP32.
-#if defined(ARDUINO_ARCH_ESP8266)
-typedef ESP8266WebServer  WiFiWebServer;
-#elif defined(ARDUINO_ARCH_ESP32)
 typedef WebServer WiFiWebServer;
-#endif
 
 AutoConnect  portal;
 AutoConnectConfig config;
@@ -72,7 +34,7 @@ String  serverPort;
 String  userName;
 String  userPassword;
 String  apid;
-unsigned int  updateInterval = 60;
+unsigned int  updateInterval = 600000;
 unsigned long lastPub = 0;
 
 bool mqttConnect() {
@@ -87,6 +49,7 @@ bool mqttConnect() {
 
     if (mqttClient.connect( "di2mqtt", userName.c_str(), userPassword.c_str() )) {
       Serial.println("Established:" );
+      mqttClient.publish("di2mqtt/debug", "Connected to MQTT");
       return true;
     } else {
       Serial.println("Connection failed:" + String(mqttClient.state()));
@@ -103,26 +66,26 @@ void mqttPublish(String msg) {
   mqttClient.publish(path.c_str(), msg.c_str());
 }
 
-int getStrength(uint8_t points) {
-  uint8_t sc = points;
-  long    rssi = 0;
-
-  while (sc--) {
-    rssi += WiFi.RSSI();
-    delay(20);
-  }
-  return points ? static_cast<int>(rssi / points) : 0;
-}
 
 String loadParams(AutoConnectAux& aux, PageArgument& args) {
   (void)(args);
   File param = FlashFS.open(PARAM_FILE, "r");
   if (param) {
-    aux.loadElement(param);
-    param.close();
+    // Load the elements with parameters
+    bool rc = aux.loadElement(param);
+    if (rc) {
+      // here, obtain parameters
+      serverName = aux.getElement<AutoConnectInput>("mqttserver").value;
+      serverPort = aux.getElement<AutoConnectInput>("mqttport").value;
+      userName = aux.getElement<AutoConnectInput>("mqttuser").value;
+      userPassword = aux.getElement<AutoConnectInput>("mqttpassword").value;
+
+      Serial.println(String(PARAM_FILE) + " loaded");
   }
   else
     Serial.println(PARAM_FILE " open failed");
+  }
+  param.close();
   return String("");
 }
 
@@ -234,15 +197,18 @@ void setup() {
 
 void loop() {
   portal.handleClient();
+  if (!mqttClient.connected()) {
+    mqttConnect();
+  }
+  mqttClient.loop();
+  
+  // send alive message
   if (updateInterval > 0) {
-    if (millis() - lastPub > updateInterval) {
-      if (!mqttClient.connected()) {
-        mqttConnect();
-      }
-      String item = String("field1=") + String(getStrength(7));
-      mqttPublish(item);
-      mqttClient.loop();
+    if ( (millis() - lastPub > updateInterval) || (millis() < lastPub) ) {
+      mqttClient.publish("di2mqtt/debug", "alive");
       lastPub = millis();
     }
   }
+  // delay at the end of loop
+  delay(50);
 }
