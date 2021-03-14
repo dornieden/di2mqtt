@@ -7,6 +7,8 @@
 * @copyright MIT license.
 */
 
+#include "Arduino.h"
+#include <SPI.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
@@ -21,6 +23,44 @@ fs::SPIFFSFS& FlashFS = SPIFFS;
 #define AUX_MQTTSETTING "/mqtt_setting"
 #define AUX_MQTTSAVE    "/mqtt_save"
 #define AUX_MQTTCLEAR   "/mqtt_clear"
+
+// ----------------------------------------------------------------------
+// configure Sensors
+#define SENSOR_COUNT 20
+#define DEVICE_NAME "di2mqtt"
+
+byte sensorPins[SENSOR_COUNT] = { 
+  4, 5, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39 
+};
+
+String deviceName = DEVICE_NAME;
+
+String sensorNames[SENSOR_COUNT] = {
+  "input_1", // PIN IO4 on ESP32
+  "input_2", // PIN IO5 on ESP32
+  "input_3", // PIN IO13 on ESP32
+  "input_4", // PIN IO14 on ESP32
+  "input_5", // PIN IO16 on ESP32
+  "input_6", // PIN IO17 on ESP32
+  "input_7", // PIN IO18 on ESP32
+  "input_8", // PIN IO19 on ESP32
+  "input_9", // PIN IO21 on ESP32
+  "input_10", // PIN IO22 on ESP32
+  "input_11", // PIN IO23 on ESP32
+  "input_12", // PIN IO25 on ESP32
+  "input_13", // PIN IO26 on ESP32
+  "input_14", // PIN IO27 on ESP32
+  "input_15", // PIN IO32 on ESP32
+  "input_16", // PIN IO33 on ESP32
+  "input_17", // PIN IO34 on ESP32
+  "input_18", // PIN IO35 on ESP32
+  "input_19", // PIN Sensor_VP on ESP32
+  "input_20"  // PIN Sensor_VN on ESP32
+};
+
+boolean sensorStates[SENSOR_COUNT] = {
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
 
 // Adjusting WebServer class with between ESP8266 and ESP32.
 typedef WebServer WiFiWebServer;
@@ -65,7 +105,6 @@ void mqttPublish(String msg) {
   String path = String("channels/") + String("/publish/");
   mqttClient.publish(path.c_str(), msg.c_str());
 }
-
 
 String loadParams(AutoConnectAux& aux, PageArgument& args) {
   (void)(args);
@@ -135,8 +174,6 @@ void handleRoot() {
   webServer.send(200, "text/html", content);
 }
 
-
-// Load AutoConnectAux JSON from the flash on the board.
 bool loadAux(const String auxName) {
   bool  rc = false;
   String  fn = auxName + ".json";
@@ -191,6 +228,12 @@ void setup() {
     }
   }
 
+  // sensors
+  for (byte i = 0; i < SENSOR_COUNT; i++) {
+      byte pin = sensorPins[i];
+      pinMode(pin, INPUT);
+  }
+
   WiFiWebServer&  webServer = portal.host();
   webServer.on("/", handleRoot);
 }
@@ -209,6 +252,46 @@ void loop() {
       lastPub = millis();
     }
   }
+
+// sensor logic
+  for (byte i = 0; i < SENSOR_COUNT; i++) {
+        
+        // Create some helper variables.
+        byte pin = sensorPins[i];
+        boolean pinState = digitalRead(pin);
+        boolean lastPinState =  sensorStates[i];
+        String sensorName = sensorNames[i];
+
+      if (pinState != lastPinState) {
+
+          // Define a string with the topic to which we want to post the new state to ...
+          // and convert it into a char * array which we need for the pubsubclient.
+          String feedNameString =  String(deviceName + "/status/" + sensorName);
+          char topic[feedNameString.length() + 1 ];
+          feedNameString.toCharArray(topic, feedNameString.length() + 1);
+
+          // Output the new state to the serial for debugging.
+          Serial.print("New state for sensor ");
+          Serial.print(topic);
+          Serial.print(": ");
+          Serial.print(pinState);
+
+          // Publish the new state to the MQTT server.
+          // The message is sent as a retained message to always 
+          // have the last state available on the broker.
+          // The QoS is set to 1, to make sure the delivery 
+          // of the mseeage to the broker is guaranteed.            
+          if (mqttClient.publish(topic, pinState ? "1" : "0") ){
+              Serial.println(F(" ... Published!"));
+          } else {
+              Serial.println(F(" ... MQTT PUBLISH FAILED!"));
+          }
+          
+          // Store the new pinstate in the pinStates array.
+          sensorStates[i] = pinState;
+      }
+  }
+
   // delay at the end of loop
   delay(50);
 }
