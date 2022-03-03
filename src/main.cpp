@@ -28,6 +28,7 @@ fs::SPIFFSFS& FlashFS = SPIFFS;
 // configure Sensors
 #define SENSOR_COUNT 20
 #define DEVICE_NAME "di2mqtt"
+#define SW_VERSION "1.1.2"
 
 byte sensorPins[SENSOR_COUNT] = { 
   4, 5, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39 
@@ -74,8 +75,10 @@ String  serverPort;
 String  userName;
 String  userPassword;
 String  apid;
-unsigned int  updateInterval = 600000;
+unsigned int  updateInterval = 60000;
 unsigned long lastPub = 0;
+unsigned long previousMillis = 0;
+unsigned long interval = 30000;
 
 bool mqttConnect() {
   uint8_t retry = 3;
@@ -89,7 +92,7 @@ bool mqttConnect() {
 
     if (mqttClient.connect( "di2mqtt", userName.c_str(), userPassword.c_str() )) {
       Serial.println("Established:" );
-      mqttClient.publish("di2mqtt/debug", "Connected to MQTT");
+      mqttClient.publish("di2mqtt/debug/status", "Connected to MQTT");
       return true;
     } else {
       Serial.println("Connection failed:" + String(mqttClient.state()));
@@ -164,11 +167,58 @@ void handleRoot() {
     "<html>"
     "<head>"
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+    "<meta http-equiv=\"refresh\" content=\"5\">"
     "</head>"
     "<body>"
     "<p style=\"padding-top:5px;text-align:center\">" AUTOCONNECT_LINK(COG_24) "</p>"
+    "<H1>Digital Input States</H1>"
+    "<p>Input_1: {{INPUT1}}</p>"
+    "<p>Input_2: {{INPUT2}}</p>"
+    "<p>Input_3: {{INPUT3}}</p>"
+    "<p>Input_4: {{INPUT4}}</p>"
+    "<p>Input_5: {{INPUT5}}</p>"
+    "<p>Input_6: {{INPUT6}}</p>"
+    "<p>Input_7: {{INPUT7}}</p>"
+    "<p>Input_8: {{INPUT8}}</p>"
+    "<p>Input_9: {{INPUT9}}</p>"
+    "<p>Input_10: {{INPUT10}}</p>"
+    "<p>Input_11: {{INPUT11}}</p>"
+    "<p>Input_12: {{INPUT12}}</p>"
+    "<p>Input_13: {{INPUT13}}</p>"
+    "<p>Input_14: {{INPUT14}}</p>"
+    "<p>Input_15: {{INPUT15}}</p>"
+    "<p>Input_16: {{INPUT16}}</p>"
+    "<p>Input_17: {{INPUT17}}</p>"
+    "<p>Input_18: {{INPUT18}}</p>"
+    "<p>Input_19: {{INPUT19}}</p>"
+    "<p>Input_20: {{INPUT20}}</p>"
+    "<H1>Debug Info</H1>"
+    "<p>SW-Version: {{SW_VERSION}}</p>"
     "</body>"
     "</html>";
+
+  content.replace( "{{INPUT1}}", String( digitalRead(sensorPins[0]) ) );
+  content.replace( "{{INPUT2}}", String( digitalRead(sensorPins[1]) ) );
+  content.replace( "{{INPUT3}}", String( digitalRead(sensorPins[2]) ) );
+  content.replace( "{{INPUT4}}", String( digitalRead(sensorPins[3]) ) );
+  content.replace( "{{INPUT5}}", String( digitalRead(sensorPins[4]) ) );
+  content.replace( "{{INPUT6}}", String( digitalRead(sensorPins[5]) ) );
+  content.replace( "{{INPUT7}}", String( digitalRead(sensorPins[6]) ) );
+  content.replace( "{{INPUT8}}", String( digitalRead(sensorPins[7]) ) );
+  content.replace( "{{INPUT9}}", String( digitalRead(sensorPins[8]) ) );
+  content.replace( "{{INPUT10}}", String( digitalRead(sensorPins[9]) ) );
+  content.replace( "{{INPUT11}}", String( digitalRead(sensorPins[10]) ) );
+  content.replace( "{{INPUT12}}", String( digitalRead(sensorPins[11]) ) );
+  content.replace( "{{INPUT13}}", String( digitalRead(sensorPins[12]) ) );
+  content.replace( "{{INPUT14}}", String( digitalRead(sensorPins[13]) ) );
+  content.replace( "{{INPUT15}}", String( digitalRead(sensorPins[14]) ) );
+  content.replace( "{{INPUT16}}", String( digitalRead(sensorPins[15]) ) );
+  content.replace( "{{INPUT17}}", String( digitalRead(sensorPins[16]) ) );
+  content.replace( "{{INPUT18}}", String( digitalRead(sensorPins[17]) ) );
+  content.replace( "{{INPUT19}}", String( digitalRead(sensorPins[18]) ) );
+  content.replace( "{{INPUT20}}", String( digitalRead(sensorPins[19]) ) );
+  content.replace( "{{SW_VERSION}}", String( SW_VERSION ) );
+
 
   WiFiWebServer&  webServer = portal.host();
   webServer.send(200, "text/html", content);
@@ -244,11 +294,22 @@ void loop() {
     mqttConnect();
   }
   mqttClient.loop();
+
+  // if WiFi is down, try reconnecting
+  unsigned long currentMillis = millis();
+  if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
+    Serial.print(millis());
+    Serial.println("Reconnecting to WiFi...");
+    WiFi.disconnect();
+    WiFi.reconnect();
+    previousMillis = currentMillis;
+  }
   
-  // send alive message
+  // send alive message including sw-version
   if (updateInterval > 0) {
     if ( (millis() - lastPub > updateInterval) || (millis() < lastPub) ) {
-      mqttClient.publish("di2mqtt/debug", "alive");
+      mqttClient.publish("di2mqtt/debug/alive", "1");
+      mqttClient.publish("di2mqtt/debug/version", SW_VERSION);
       lastPub = millis();
     }
   }
