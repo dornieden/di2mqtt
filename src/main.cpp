@@ -28,7 +28,7 @@ fs::SPIFFSFS& FlashFS = SPIFFS;
 // configure Sensors
 #define SENSOR_COUNT 20
 #define DEVICE_NAME "di2mqtt"
-#define SW_VERSION "1.1.2"
+#define SW_VERSION "1.1.3"
 
 byte sensorPins[SENSOR_COUNT] = { 
   4, 5, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39 

@@ -4,3 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 _archive/main.cpp
+.DS_Store
